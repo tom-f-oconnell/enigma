@@ -16,7 +16,7 @@ class Enigma:
         # TODO rotor settings and plugboard. 4th rotor? else?
 
         # TODO maybe move all this stuff out of init?
-        alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+        self.alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
         # rotors from the Enigma I
         # introduced in 1930
@@ -56,10 +56,15 @@ class Enigma:
         mk3 = {3, 'M3 & M4 Naval', 'M4 Naval', 'M4', 'Naval'}
 
         if model == 'Enigma I' or model == 1:
-            self.rotor1 = dict(zip(alphabet, I))
-            self.rotor2 = dict(zip(alphabet, II))
-            self.rotor3 = dict(zip(alphabet, III))
-            # TODO did this also rotate ever?
+            self.rotor1 = I
+            self.rotor2 = II
+            self.rotor3 = III
+            
+            # go between 0 and len(rotor) - 1
+            self.offset1 = 0
+            self.offset2 = 0
+            self.offset3 = 0
+
             self.reflector = etw
 
             self.turn2 = I[0]
@@ -92,8 +97,41 @@ class Enigma:
         else:
             raise NameError('unrecognized enigma model')
 
-    def encode(plaintext):
-        return None
+    def mapchar(self, char, from_string, to_string):
+        # TODO don't linear scan
+        char = char.upper()
+        for i, c in enumerate(from_string):
+            if c == char:
+                return to_string[i]
 
-    def decode(cyphertext):
+        raise NameError('character not in string maps')
+    
+    def encode_char(self, char):
+        r1_in = self.mapchar(char, self.alphabet, self.rotor1)
+        r2_in = self.mapchar(r1_in, self.rotor1, self.rotor2)
+        r3_in = self.mapchar(r2_in, self.rotor2, self.rotor3)
+
+        ref_out = self.mapchar(r3_in, self.rotor3, self.reflector)
+
+        r1_out = self.mapchar(ref_out, self.alphabet, self.rotor1)
+        r2_out = self.mapchar(r1_out, self.rotor1, self.rotor2)
+        encoded = self.mapchar(r2_out, self.rotor2, self.rotor3)
+
+        # TODO precedence?
+        # circularly shift the rotor (as if spinning it)
+        self.rotor1 = self.rotor1[1:] + self.rotor1[0]
+        
+        if self.rotor1[0] == self.turn2:
+            self.rotor2 = self.rotor2[1:] + self.rotor2[0]
+
+        # TODO or 'in' if not unique
+        if self.rotor2[0] == self.turn3:
+            self.rotor3 = self.rotor3[1:] + self.rotor3[0]
+
+        return encoded
+
+    def encode(self, plaintext):
+        return ''.join([self.encode_char(x) for x in plaintext])
+
+    def decode(self, cyphertext):
         return None
